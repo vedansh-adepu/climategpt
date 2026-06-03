@@ -1,0 +1,27 @@
+# ClimateGPT Streamlit UI
+# Python 3.11 is required for optimal compatibility
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install UV package manager
+RUN pip install --no-cache-dir uv
+
+# Copy dependency files
+COPY pyproject.toml uv.lock* ./
+
+# Install Python dependencies using UV (faster and more reliable)
+RUN uv pip install --system --no-cache -r pyproject.toml
+
+# Fallback: Also copy requirements.txt for compatibility
+COPY requirements.txt* ./
+RUN if [ -f requirements.txt ]; then uv pip install --system --no-cache -r requirements.txt; fi
+
+# Copy application code
+COPY . .
+
+# Expose Streamlit default port
+EXPOSE 8501
+
+# Run Streamlit UI
+CMD ["streamlit", "run", "enhanced_climategpt_with_personas.py", "--server.port=8501", "--server.address=0.0.0.0"]
