@@ -55,14 +55,14 @@ class TestDataPlatform:
             for field in pii_fields:
                 if field in anon_record:
                     # Hash the value
-                    anon_record[field] = f"ANON_{hashlib.md5(str(anon_record[field]).encode()).hexdigest()[:8]}"
+                    anon_record[field] = f"ANON_{hashlib.sha256(str(anon_record[field]).encode()).hexdigest()[:8]}"
             anonymized.append(anon_record)
         return anonymized
 
     def version_dataset(self, dataset_id: str, data: List[Dict[str, Any]]) -> DatasetVersion:
         """Version a dataset."""
         version = f"v{len(self.versions.get(dataset_id, [])) + 1}"
-        checksum = hashlib.md5(json.dumps(data).encode()).hexdigest()
+        checksum = hashlib.sha256(json.dumps(data).encode()).hexdigest()
 
         dv = DatasetVersion(
             dataset_id=dataset_id,

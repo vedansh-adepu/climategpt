@@ -1610,7 +1610,7 @@ class QueryCache:
     def _get_cache_key(self, sql: str, params: list) -> str:
         """Generate cache key from SQL and parameters"""
         cache_str = sql + json.dumps(params, sort_keys=True)
-        return hashlib.md5(cache_str.encode()).hexdigest()
+        return hashlib.sha256(cache_str.encode()).hexdigest()
     
     def get(self, sql: str, params: list):
         """Get cached result if exists and not expired"""
@@ -4788,7 +4788,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
 
 
 

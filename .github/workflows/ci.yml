@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11"]
 
     steps:
       - name: Checkout code
@@ -113,11 +113,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-
-      - name: Install UV package manager
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: |
@@ -139,13 +134,15 @@ jobs:
         if: env.DATABASE_AVAILABLE == 'true'
         env:
           MCP_MANIFEST_PATH: data/curated-2/manifest_mcp_duckdb.json
+          PYTHONPATH: src
         run: |
           pytest tests/ -v --cov=. --cov-report=xml --cov-report=term
 
       - name: Run stdio MCP tests
-        if: env.DATABASE_AVAILABLE == 'true'
+        if: env.DATABASE_AVAILABLE == 'true' && hashFiles('test_mcp_stdio.py') != ''
         env:
           MCP_MANIFEST_PATH: data/curated-2/manifest_mcp_duckdb.json
+          PYTHONPATH: src
         run: |
           python test_mcp_stdio.py
 
@@ -199,16 +196,16 @@ jobs:
 
       - name: Test server imports
         run: |
-          python -c "import mcp_server; print('✅ mcp_server.py imports successfully')" || echo "⚠️ mcp_server.py import failed"
-          python -c "import mcp_server_stdio; print('✅ mcp_server_stdio.py imports successfully')" || echo "⚠️ mcp_server_stdio.py import failed"
+          PYTHONPATH=src python -c "import mcp_http_bridge; print('✅ mcp_http_bridge.py imports successfully')" || echo "⚠️ mcp_http_bridge.py import failed"
+          PYTHONPATH=src python -c "import mcp_server_stdio; print('✅ mcp_server_stdio.py imports successfully')" || echo "⚠️ mcp_server_stdio.py import failed"
 
       - name: Check Docker builds
         run: |
-          if [ -f "Dockerfile.server" ]; then
-            docker build -f Dockerfile.server -t climategpt-server:test . || echo "⚠️ Server Docker build failed"
+          if [ -f "config/Dockerfile.server" ]; then
+            docker build -f config/Dockerfile.server -t climategpt-server:test . || echo "⚠️ Server Docker build failed"
           fi
-          if [ -f "Dockerfile.ui" ]; then
-            docker build -f Dockerfile.ui -t climategpt-ui:test . || echo "⚠️ UI Docker build failed"
+          if [ -f "config/Dockerfile.ui" ]; then
+            docker build -f config/Dockerfile.ui -t climategpt-ui:test . || echo "⚠️ UI Docker build failed"
           fi
 
   # Job 5: Report

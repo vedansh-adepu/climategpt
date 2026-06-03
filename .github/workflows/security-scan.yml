@@ -106,8 +106,6 @@ jobs:
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        base: ${{ github.event.repository.default_branch }}
-        head: HEAD
         extra_args: --debug --only-verified
 
   license-compliance:
@@ -158,10 +156,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Check for Dockerfile
+      id: dockerfile
+      run: |
+        if [ -f "Dockerfile" ]; then
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+          echo "Dockerfile not found; skipping Docker image scan."
+        fi
+
     - name: Build Docker image
+      if: steps.dockerfile.outputs.exists == 'true'
       run: docker build -t climategpt:test .
 
     - name: Run Trivy vulnerability scanner
+      if: steps.dockerfile.outputs.exists == 'true'
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: 'climategpt:test'
@@ -170,6 +180,7 @@ jobs:
         severity: 'CRITICAL,HIGH'
 
     - name: Upload Trivy results to GitHub Security tab
+      if: steps.dockerfile.outputs.exists == 'true'
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: 'trivy-results.sarif'

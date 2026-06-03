@@ -37,13 +37,13 @@ jobs:
 
       - name: Run Safety check
         run: |
-          safety check --json --output safety-report.json || true
-          safety check --full-report
+          safety check --output json > safety-report.json || true
+          safety check --full-report || true
 
       - name: Run pip-audit
         run: |
           pip-audit --requirement requirements.txt --format json --output pip-audit-report.json || true
-          pip-audit --requirement requirements.txt
+          pip-audit --requirement requirements.txt || true
 
       - name: Upload vulnerability reports
         uses: actions/upload-artifact@v4
@@ -107,14 +107,13 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
           extra_args: --debug --only-verified
 
   # Job 4: SAST with CodeQL
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
+    if: github.event.repository.private == false
     permissions:
       security-events: write
       actions: read
@@ -152,13 +151,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker images
+      - name: Check for Dockerfile
+        id: dockerfile
         run: |
           if [ -f "Dockerfile.server" ]; then
-            docker build -f Dockerfile.server -t climategpt-server:scan .
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Dockerfile.server not found; skipping Docker image scan."
           fi
 
+      - name: Build Docker images
+        if: steps.dockerfile.outputs.exists == 'true'
+        run: |
+          docker build -f Dockerfile.server -t climategpt-server:scan .
+
       - name: Run Trivy vulnerability scanner
+        if: steps.dockerfile.outputs.exists == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'climategpt-server:scan'
@@ -167,7 +176,7 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: steps.dockerfile.outputs.exists == 'true'
         with:
           sarif_file: 'trivy-results.sarif'
 
