@@ -46,7 +46,7 @@ click==8.3.0
 
 # Development and Testing (optional)
 pytest==8.3.3
-black==24.8.0
+black==26.10.1
 ruff==0.6.9
 
 # Additional Dependencies
